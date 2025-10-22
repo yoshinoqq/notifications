@@ -16,7 +16,7 @@ jobs:
       
     - name: Build and start application
       run: |
-        docker compose build --cache
+        docker compose build 
         docker compose up 
 
         sleep 30
