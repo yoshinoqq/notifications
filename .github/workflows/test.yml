@@ -1,0 +1,35 @@
+name: Test Application Logic
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-logic:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build and start application
+      run: |
+        docker compose build --cache
+        docker compose up 
+
+        sleep 30
+        
+    - name: Test main functionality
+      run: |
+
+        
+        curl -X POST http://localhost:8080/notifications -H "Content-Type: application/json; charset=utf-8" -d '{ "message": "Привет, это тест!"}'
+
+        
+
+        
+    - name: Cleanup
+      if: always()
+      run: docker-compose down
