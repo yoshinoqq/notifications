@@ -1,0 +1,60 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Slavsem2008
+      POSTGRES_DB: ruslanzadachabd
+    ports:
+      - "9920:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  api:
+    build:
+      context: ./api
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+    environment:
+      DB_HOST: db
+      DB_USER: postgres
+      DB_PASSWORD: Slavsem2008
+      DB_NAME: ruslanzadachabd
+      DB_PORT: 5432
+      REDIS_ADDR: redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+    ports:
+      - "8080:8080"
+    command: ["go", "run", "main.go"]
+
+
+
+  telegram_worker:
+    build:
+      context: ./api
+      
+    depends_on:
+      - rabbitmq
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+      TELEGRAM_BOT_TOKEN: "7981315627:AAHRycToW7UpHq8Ptfmv9iUYLfRoTBruIVQ"
+      TELEGRAM_CHAT_ID: "1398641935"
+    command: ["go", "run", "./telegram-worker/telegram_worker.go"]
+
+volumes:
+  postgres_data:
