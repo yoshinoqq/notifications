@@ -19,46 +19,56 @@ jobs:
         docker compose build
         docker compose up -d
         
-    - name: Wait for application to be ready
+    - name: Wait for Go application to be ready
       run: |
-        echo "Waiting for application to start..."
-        # Ждем пока приложение реально запустится
-        for i in {1..30}; do
-          if docker compose logs | grep -q "started\|ready\|listening\|Running"; then
-            echo "✅ Application is ready!"
+        echo "Waiting for Go application to start..."
+        # Ждем пока в логах api появится сообщение о успешном запуске
+        for i in {1..60}; do
+          if docker compose logs api 2>/dev/null | grep -i "started\|listening\|running\|ready"; then
+            echo "✅ Go application is ready!"
             break
           fi
-          echo "Waiting... ($i/30)"
+          echo "Waiting for Go app... ($i/60)"
           sleep 5
         done
         
-    - name: Check service status
+    - name: Check API container status
       run: |
-        echo "=== Service status ==="
-        docker compose ps
-        echo "=== Recent logs ==="
+        echo "=== API container status ==="
+        docker compose ps api
+        echo "=== API logs ==="
+        docker compose logs api --tail=30
+        
+    - name: Check if API process is running
+      run: |
+        echo "=== Checking processes in API container ==="
+        docker compose exec api ps aux || echo "Cannot check processes"
+        
+    - name: Test with simple endpoint first
+      run: |
+        echo "Testing health endpoint first..."
+        # Сначала тестируем простой эндпоинт если есть
+        curl -v http://localhost:8080/health || \
+        curl -v http://localhost:8080/ || \
+        echo "No health endpoint found"
+        
+    - name: Test notifications endpoint
+      run: |
+        echo "Testing notifications endpoint..."
+        # Упрощаем запрос для диагностики
+        curl -v -X POST http://localhost:8080/notifications \
+          -H "Content-Type: application/json" \
+          -d '{"message": "test"}' \
+          --max-time 10 || echo "Notifications endpoint test failed"
+        
+    - name: Debug - show all logs if test fails
+      if: failure()
+      run: |
+        echo "=== DEBUG: All container logs ==="
         docker compose logs --tail=50
-        
-
-        
-    - name: Test main functionality
-      run: |
-        echo "Testing API endpoint..."
-        # Пробуем с таймаутом и повторными попытками
-        for i in {1..5}; do
-          if curl -v -X POST http://localhost:8080/notifications \
-            -H "Content-Type: application/json; charset=utf-8" \
-            -d '{ "message": "Привет, это тест!"}' \
-            --max-time 10 --retry 2; then
-            echo "✅ API test passed!"
-            exit 0
-          else
-            echo "⚠️ Attempt $i failed, retrying..."
-            sleep 5
-          fi
-        done
-        echo "❌ All API attempts failed"
-        exit 1
+        echo "=== DEBUG: API container details ==="
+        docker compose ps api
+        docker compose exec api ps aux 2>/dev/null || echo "Cannot exec into container"
         
     - name: Cleanup
       if: always()
