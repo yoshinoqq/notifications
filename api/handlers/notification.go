@@ -13,7 +13,38 @@ import (
 	"github.com/tovma/ruslanzadacha/api/models"
 	"github.com/tovma/ruslanzadacha/api/repository"
 )
+func RegUserHandler(repo *repository.NotificationRepository) gin.HandlerFunc {
+    return func(c *gin.Context){
+           log.Println("✅ RegUserHandler вызван!")
+        var n models.RegUser
+        
+        if err := c.BindJSON(&n); err != nil {
+            c.JSON(http.StatusBadRequest, gin.H{"error": "invalid data"})
+            return
+        }
+        
 
+        userID, err := repo.CreateUser(&n)
+        if err != nil {
+            log.Printf("❌ Ошибка CreateUser: %v", err)
+            c.JSON(http.StatusInternalServerError, gin.H{"error": "could not save"})
+            return
+        }
+         log.Printf("✅ Пользователь создан с ID: %d", userID)
+        response := models.UserResponse{
+            ID:        userID,
+            Username:  n.Username,
+            Email:     n.Email,
+            CreatedAt: time.Now(),
+        }
+        c.JSON(http.StatusCreated, response) 
+    }
+}
+func LoginUserHandler(repo *repository.NotificationRepository) gin.HandlerFunc {
+    return func(c *gin.Context){
+        
+    }
+}
 func CreateNotificationHandler(repo *repository.NotificationRepository) gin.HandlerFunc {
     return func(c *gin.Context) {
         var n models.Notification

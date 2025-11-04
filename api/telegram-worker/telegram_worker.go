@@ -26,6 +26,7 @@ func failOnError(err error, msg string) {
 }
 
 func sendToTelegram(bot *tgbotapi.BotAPI, message string) {
+    
     msg := tgbotapi.NewMessage(chatID, message)
     _, err := bot.Send(msg)
     if err != nil {
